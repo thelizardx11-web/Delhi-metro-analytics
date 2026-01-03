@@ -1,0 +1,83 @@
+-- create and select the practice dashboard 
+CREATE DATABASE IF NOT EXISTS loan_risk;
+USE loan_risk;
+
+-- customers table 
+CREATE TABLE customers (
+   customer_id INT PRIMARY KEY,
+   annual_income DECIMAL(12,2),
+   employment_length INT,
+   credit_score INT,
+   home_ownership VARCHAR(20),
+   state CHAR(2)
+);
+
+-- Loans table 
+CREATE TABLE loans (
+   loan_id INT PRIMARY KEY,
+   customer_id INT,
+   loan_amount DECIMAL(12,2),
+   loan_purpose VARCHAR(50),
+   interest_rate DECIMAL(5,2),
+   term_months INT,
+   issue_date DATE,
+   dti DECIMAL(6,3),
+   loan_default TINYINT(1),
+   FOREIGN KEY (customer_id) REFERENCES customers(customer_id) 
+);
+
+-- Regions table 
+CREATE TABLE regions (
+   state CHAR(2) PRIMARY KEY,
+   region_name VARCHAR(50),
+   avg_unemployment_rate DECIMAL(4,2)
+);
+
+-- loan_default rate by loan purpose 
+SELECT loan_purpose, AVG(loan_default) AS default_rate
+FROM loans
+GROUP BY loan_purpose
+ORDER BY default_rate DESC;
+
+-- Income vs Loan ammount 
+SELECT 
+  CASE 
+    WHEN annual_income < 30000 THEN 'Low Income'
+    WHEN annual_income BETWEEN 30000 AND 70000 THEN 'Mid Income'
+    ELSE 'High Income'
+  END AS income_band,
+  AVG(loan_default) AS default_rate
+FROM customers c
+JOIN loans l ON c.customer_id = l.customer_id
+GROUP BY income_band;
+
+-- Credit score impact 
+SELECT
+   CASE
+	 WHEN credit_score < 600 THEN '<600'
+     WHEN credit_score BETWEEN 600 AND 649 THEN '600-649'
+     WHEN credit_score BETWEEN 650 AND 699 THEN '650-699'
+     WHEN credit_score BETWEEN 700 AND 749 THEN '700-749'
+     ELSE '750+'
+   END AS score_bond,
+   AVG(loan_default) AS default_rate
+FROM customers c 
+JOIN loans l ON c.customer_id = l.customer_id
+GROUP BY score_bond
+ORDER BY score_bond;
+
+
+-- Employment length vs default 
+SELECT employment_length, AVG(loan_default) AS default_rate
+FROM customers c 
+JOIN loans l ON c.customer_id = l.customer_id
+GROUP BY employment_length
+ORDER BY employment_length;
+
+-- Region analysis 
+SELECT r.region_name, AVG(l.loan_default) AS default_rate
+FROM loans l 
+JOIN customers c ON l.customer_id = c.customer_id
+JOIN regions r ON c.state = r.state
+GROUP BY r.region_name
+ORDER BY default_rate DESC;
